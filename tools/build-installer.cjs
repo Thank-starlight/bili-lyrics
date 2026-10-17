@@ -1,0 +1,11 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const target = path.join(root, 'install.html');
+const script = fs.readFileSync(path.join(root, 'bili-lyrics.user.js'), 'utf8').replace(/\r\n/g, '\n');
+const page = fs.readFileSync(target, 'utf8').replace(/\r\n/g, '\n');
+const pattern = /(<script type="application\/json" id="script-source">)[\s\S]*?(<\/script>)/;
+if (!pattern.test(page)) throw new Error('Embedded script placeholder is missing.');
+const payload = JSON.stringify(script).replace(/</g, '\\u003c');
+fs.writeFileSync(target, page.replace(pattern, (_, open, close) => open + payload + close));
+console.log('Standalone install.html updated.');

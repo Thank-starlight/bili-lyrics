@@ -1,0 +1,14 @@
+{
+  "name": "bili-lyrics",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Bilibili video-page lyrics-style subtitle userscript",
+  "scripts": {
+    "build:installer": "node tools/build-installer.cjs",
+    "test:core": "node --test tests/core.test.cjs",
+    "test": "node --test tests/core.test.cjs && node tests/browser.test.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.64.1"
+  }
+}

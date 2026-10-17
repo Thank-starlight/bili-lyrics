@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>滚动字幕交互测试</title>
+<style>
+body{margin:0;background:#f7f8fa;font-family:"Microsoft YaHei",sans-serif;color:#344254}header{height:64px;background:white;display:flex;align-items:center;padding:0 46px;font-weight:bold;color:#00a1d6;border-bottom:1px solid #e7ecf2}main{max-width:1180px;margin:32px auto;display:grid;grid-template-columns:1fr 330px;gap:32px}.player{height:440px;border-radius:12px;background:#18202e;display:grid;place-items:center;color:#c8d1df;text-align:center}.player b{display:block;font-size:28px;color:white;margin-bottom:15px}h1{font-size:21px}p{font-size:13px;color:#8592a3}.placeholder{padding:22px;border-radius:12px;background:white;color:#9aa5b2}video{width:1px;height:1px;position:absolute;opacity:0}
+</style>
+<header>BILI LYRICS · 字幕面板交互演示</header>
+<main><section><h1>可展开的歌词式滚动字幕</h1><div class="player"><div><b>点击一句，回到那一刻</b>此页面使用模拟播放器和演示字幕<br>不是该 B 站视频的真实字幕</div></div><p>演示覆盖跟随播放、自由滚动、时间跳转与搜索。</p></section><aside class="right-container"><div class="placeholder">视频页右侧栏</div></aside></main>
+<script>
+window.playCount=0;
+window.makePlayer=()=>{
+  document.querySelector('video')?.remove();
+  const video=document.createElement('video');
+  let current=0;
+  Object.defineProperty(video,'currentTime',{get:()=>current,set:t=>{current=t;video.dispatchEvent(new Event('timeupdate'));}});
+  video.play=async()=>{window.playCount++;};
+  document.querySelector('.player').append(video);
+};
+window.makePlayer();
+</script></html>
