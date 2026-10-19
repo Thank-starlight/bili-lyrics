@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         B站滚动字幕 · Bili Lyrics
 // @namespace    local.bili-lyrics
-// @version      1.2.0
+// @version      1.3.0
 // @homepageURL  https://github.com/Thank-starlight/bili-lyrics
 // @supportURL   https://github.com/Thank-starlight/bili-lyrics/issues
 // @updateURL    https://raw.githubusercontent.com/Thank-starlight/bili-lyrics/main/bili-lyrics.user.js
@@ -9,6 +9,7 @@
 // @description  视频页右侧展开字幕，歌词式跟随、自由滚动、点击跳转、搜索与导出。
 // @match        https://www.bilibili.com/video/*
 // @grant        GM_xmlhttpRequest
+// @grant        unsafeWindow
 // @connect      api.bilibili.com
 // @connect      hdslb.com
 // @connect      subtitle.bilibili.com
@@ -218,8 +219,10 @@
       .setting-label,.custom-font-field { display:block; font-size:12px; color:var(--muted); }
       .font-settings select { display:block; width:100%; margin-top:4px; background:var(--bg); }
       .custom-font-field { margin-top:9px; }
-      .font-name { display:block; width:100%; min-width:0; margin-top:4px; padding:6px 8px; border:1px solid var(--border); border-radius:6px; color:var(--text); background:var(--bg); font-size:12px; }
-      .font-name::placeholder { color:var(--faint); opacity:1; }
+      .font-name,.local-font-search { display:block; width:100%; min-width:0; margin-top:4px; padding:6px 8px; border:1px solid var(--border); border-radius:6px; color:var(--text); background:var(--bg); font-size:12px; }
+      .font-name::placeholder,.local-font-search::placeholder { color:var(--faint); opacity:1; }
+      .font-read-row { display:flex; align-items:center; gap:8px; margin-top:8px; }
+      .font-read-status { margin-top:5px; font-size:11px; color:var(--muted); line-height:1.7; overflow-wrap:anywhere; }
       .font-size-row { display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12px; color:var(--muted); }
       .font-size-row label,.font-size-value { flex:none; } .font-size-row input { flex:1; min-width:0; width:100%; accent-color:var(--accent); }
       .font-size-value { min-width:32px; font-variant-numeric:tabular-nums; text-align:right; }
@@ -261,6 +264,9 @@
             <select id="lyrics-font-family" class="font-preset" aria-label="字幕字体">
               <option value="system">系统默认</option><option value="yahei">微软雅黑</option><option value="simsun">宋体</option><option value="kaiti">楷体</option><option value="simhei">黑体</option><option value="pingfang">苹方</option><option value="sourcehan">思源黑体</option><option value="wenkai">霞鹜文楷</option><option value="custom">自定义字体…</option>
             </select>
+            <div class="font-read-row"><button class="small font-read">读取本机字体</button></div>
+            <p class="font-read-status" role="status" aria-live="polite" hidden></p>
+            <input class="local-font-search" type="search" aria-label="搜索本机字体" placeholder="搜索已读取的本机字体…" hidden>
             <label class="custom-font-field" hidden>本机字体名称<input class="font-name" type="text" aria-label="自定义字体名称" maxlength="120" placeholder="例如：LXGW WenKai / 霞鹜文楷" autocomplete="off" spellcheck="false"></label>
             <div class="font-size-row"><label for="lyrics-font-size">字号</label><input id="lyrics-font-size" class="font-size" type="range" min="12" max="32" step="1" value="14" aria-label="字幕字号"><output class="font-size-value" for="lyrics-font-size">14px</output></div>
             <div class="font-bottom"><span>需本机已安装；未安装时使用备用字体</span><button class="small font-reset">恢复默认</button></div>
@@ -305,11 +311,65 @@
     height: Number.isFinite(saved.height) ? saved.height : 620,
     theme: ['dark','light'].includes(saved.theme) ? saved.theme
       : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-    fontPreset: Object.hasOwn(FONT_PRESETS, saved.fontPreset) || saved.fontPreset === 'custom' ? saved.fontPreset : 'system',
+    fontPreset: Object.hasOwn(FONT_PRESETS, saved.fontPreset) || ['custom','local'].includes(saved.fontPreset) ? saved.fontPreset : 'system',
     fontFamily: cleanFontName(saved.fontFamily),
     fontSize: Number.isFinite(saved.fontSize) ? clamp(Math.round(saved.fontSize), 12, 32) : 14,
   };
   let suppressHeaderClickUntil = 0;
+  let localFontFamilies = [];
+  const localFontGroup = document.createElement('optgroup');
+  localFontGroup.label = '本机字体';
+  $('.font-preset').append(localFontGroup);
+
+  function renderLocalFonts() {
+    const query = $('.local-font-search').value.trim().toLocaleLowerCase();
+    const matches = localFontFamilies.filter(name => name.toLocaleLowerCase().includes(query));
+    const names = [...matches];
+    // Retain only the selected family across reloads, not the whole font inventory.
+    if (layout.fontPreset === 'local' && layout.fontFamily && !names.includes(layout.fontFamily)) names.unshift(layout.fontFamily);
+    localFontGroup.replaceChildren(...names.map(name => new Option(name, `local:${name}`)));
+    localFontGroup.label = localFontFamilies.length ? `本机字体（${matches.length}/${localFontFamilies.length}）` : '上次选择的本机字体';
+    localFontGroup.hidden = names.length === 0;
+    $('.font-preset').value = layout.fontPreset === 'local' ? `local:${layout.fontFamily}` : layout.fontPreset;
+    $('.local-font-search').hidden = !localFontFamilies.length;
+  }
+
+  function fontReadStatus(message) {
+    $('.font-read-status').textContent = message;
+    $('.font-read-status').hidden = false;
+  }
+
+  $('.font-read').addEventListener('click', async () => {
+    const fontWindow = typeof unsafeWindow !== 'undefined' && typeof unsafeWindow.queryLocalFonts === 'function'
+      ? unsafeWindow : typeof window.queryLocalFonts === 'function' ? window : null;
+    if (!fontWindow) {
+      fontReadStatus('当前浏览器不支持读取本机字体。请使用支持此功能的桌面浏览器，或选择预设／手动输入。');
+      return;
+    }
+    $('.font-read').disabled = true;
+    fontReadStatus('请在浏览器弹窗中允许访问本机字体…');
+    try {
+      // Invoke directly during the click's user activation, before any other await.
+      const fonts = await fontWindow.queryLocalFonts();
+      const families = new Map();
+      for (const font of fonts) {
+        const family = cleanFontName(font.family);
+        if (family) families.set(family.toLocaleLowerCase(), family);
+      }
+      localFontFamilies = [...families.values()].sort(new Intl.Collator(navigator.language, { numeric: true, sensitivity: 'base' }).compare);
+      renderLocalFonts();
+      $('.font-read').textContent = '刷新本机字体';
+      fontReadStatus(localFontFamilies.length
+        ? `已读取 ${localFontFamilies.length} 种字体，请在上方“字幕字体”下拉框中选择，也可以搜索。`
+        : '浏览器没有返回可用字体，可以重新读取或使用预设字体。');
+    } catch (error) {
+      fontReadStatus(error.name === 'NotAllowedError' || error.name === 'SecurityError'
+        ? '未取得本机字体访问权限。请在浏览器的本站权限设置中允许访问本机字体，再点击重试。'
+        : '读取本机字体失败，请再次点击按钮重试；仍可使用预设或手动输入。');
+    } finally { $('.font-read').disabled = false; }
+  });
+  $('.local-font-search').addEventListener('input', renderLocalFonts);
+  renderLocalFonts();
 
   function savePreferences() {
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(layout)); } catch {}
@@ -326,12 +386,12 @@
   function applyFont() {
     // A custom name is one quoted CSS family, not a CSS fragment or a URL.
     const custom = cleanFontName(layout.fontFamily);
-    const family = layout.fontPreset === 'custom'
+    const family = ['custom','local'].includes(layout.fontPreset)
       ? custom ? `${JSON.stringify(custom)},${SYSTEM_FONT}` : SYSTEM_FONT
       : FONT_PRESETS[layout.fontPreset];
     host.style.setProperty('--cue-font', family);
     host.style.setProperty('--cue-size', `${layout.fontSize}px`);
-    $('.font-preset').value = layout.fontPreset;
+    $('.font-preset').value = layout.fontPreset === 'local' ? `local:${layout.fontFamily}` : layout.fontPreset;
     $('.custom-font-field').hidden = layout.fontPreset !== 'custom';
     if ($('.font-name').value !== layout.fontFamily) $('.font-name').value = layout.fontFamily;
     $('.font-size').value = String(layout.fontSize);
@@ -346,7 +406,11 @@
     requestAnimationFrame(() => { if (following) centerActive(); });
   });
   $('.font-preset').addEventListener('change', () => {
-    layout.fontPreset = $('.font-preset').value;
+    const choice = $('.font-preset').value;
+    if (choice.startsWith('local:')) {
+      layout.fontPreset = 'local';
+      layout.fontFamily = cleanFontName(choice.slice(6));
+    } else layout.fontPreset = choice;
     applyFont(); savePreferences();
   });
   $('.font-name').addEventListener('input', () => {
@@ -360,6 +424,8 @@
   });
   $('.font-reset').addEventListener('click', () => {
     Object.assign(layout, { fontPreset: 'system', fontFamily: '', fontSize: 14 });
+    $('.local-font-search').value = '';
+    renderLocalFonts();
     applyFont(); savePreferences();
   });
 

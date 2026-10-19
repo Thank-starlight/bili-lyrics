@@ -21,6 +21,7 @@ npm test
 | `tools/build-installer.cjs` | 将最新源码同步到安装页 |
 | `tests/core.test.cjs` | 签名、时间与文件格式验证 |
 | `tests/browser.test.cjs` | Playwright 交互与错误流程验证 |
+| `tests/local-fonts.test.cjs` | 本机字体授权、列表、搜索、保留与失败流程验证 |
 | `tests/fixture.html` | 不使用真实账号或字幕的测试页面 |
 
 ## 提交前
