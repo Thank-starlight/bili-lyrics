@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         B站滚动字幕 · Bili Lyrics
 // @namespace    local.bili-lyrics
-// @version      1.1.0
+// @version      1.2.0
 // @homepageURL  https://github.com/Thank-starlight/bili-lyrics
 // @supportURL   https://github.com/Thank-starlight/bili-lyrics/issues
 // @updateURL    https://raw.githubusercontent.com/Thank-starlight/bili-lyrics/main/bili-lyrics.user.js
@@ -208,18 +208,29 @@
       .header-actions button { display:grid; place-items:center; width:28px; height:30px; padding:0; border:0; border-radius:7px; color:var(--muted); background:transparent; font-size:18px; }
       .header-actions button:hover { color:var(--accent); background:var(--surface); }
       .chevron { color:var(--faint); font-size:17px; } .body { display:flex; flex-direction:column; flex:1; min-height:0; border-top:1px solid var(--line); }
-      .tools { padding:12px 14px 10px; flex:none; } .toolbar { display:flex; gap:7px; align-items:center; }
+      .tools { padding:12px 14px 10px; flex:none; max-height:60%; overflow-y:auto; overscroll-behavior:contain; } .toolbar { display:flex; gap:7px; align-items:center; }
       select { min-width:0; flex:1; height:31px; padding:0 6px; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:12px; }
       .small { border:1px solid var(--border); background:var(--bg); color:var(--muted); border-radius:6px; padding:4px 8px; font-size:12px; white-space:nowrap; }
       .search { width:100%; border:1px solid var(--border); background:var(--surface); border-radius:7px; padding:7px 10px; margin-top:9px; font-size:12px; color:var(--text); }
       .search::placeholder { color:var(--faint); opacity:1; }
+      .font-toggle[aria-expanded="true"] { color:var(--accent); background:var(--active); }
+      .font-settings { margin-top:10px; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); }
+      .setting-label,.custom-font-field { display:block; font-size:12px; color:var(--muted); }
+      .font-settings select { display:block; width:100%; margin-top:4px; background:var(--bg); }
+      .custom-font-field { margin-top:9px; }
+      .font-name { display:block; width:100%; min-width:0; margin-top:4px; padding:6px 8px; border:1px solid var(--border); border-radius:6px; color:var(--text); background:var(--bg); font-size:12px; }
+      .font-name::placeholder { color:var(--faint); opacity:1; }
+      .font-size-row { display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12px; color:var(--muted); }
+      .font-size-row label,.font-size-value { flex:none; } .font-size-row input { flex:1; min-width:0; width:100%; accent-color:var(--accent); }
+      .font-size-value { min-width:32px; font-variant-numeric:tabular-nums; text-align:right; }
+      .font-bottom { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:9px; font-size:11px; color:var(--faint); }
       .meta { display:flex; flex:none; align-items:center; justify-content:space-between; padding:0 15px 9px; gap:8px; font-size:11px; color:var(--faint); }
       .follow { border:0; color:var(--accent); background:var(--active); padding:3px 8px; border-radius:12px; font-size:11px; }
       .follow[aria-pressed="false"] { color:var(--muted); background:var(--surface); }
       .list { position:relative; flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--border) transparent; padding:16px 10px 80px; scroll-behavior:auto; }
       .cue { width:100%; display:flex; align-items:baseline; gap:10px; border:0; border-radius:9px; background:transparent; text-align:left; color:var(--cue); padding:11px 10px; line-height:1.8; transition:background .15s,color .15s; }
       .cue:hover { background:var(--hover); color:var(--text); } .cue time { flex:0 0 46px; font:10px/1.8 ui-monospace,Consolas,monospace; color:var(--time); }
-      .cue span { white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px; }
+      .cue span { white-space:pre-wrap; overflow-wrap:anywhere; font-family:var(--cue-font,inherit); font-size:var(--cue-size,14px); }
       .cue[aria-current="true"] { background:var(--active); color:var(--accent); font-weight:600; } .cue[aria-current="true"] time { color:var(--accent); }
       .status { flex:1; min-height:0; overflow:auto; padding:22px 18px; color:var(--muted); line-height:1.9; font-size:13px; white-space:pre-line; }
       .foot { display:flex; flex:none; align-items:center; justify-content:space-between; padding:10px 14px; border-top:1px solid var(--line); font-size:11px; color:var(--faint); }
@@ -244,7 +255,17 @@
       <div class="header-actions"><button class="theme" aria-label="深色模式" aria-pressed="false" title="切换为深色模式">☾</button><button class="reset-layout" aria-label="重置位置和大小" title="重置位置和大小">↺</button></div>
       </div>
       <div class="body" id="lyrics-body" hidden>
-        <div class="tools"><div class="toolbar"><select aria-label="字幕语言" disabled><option>等待加载字幕</option></select><button class="small reload" title="重新获取当前分 P 的字幕">重试</button></div><input class="search" type="search" placeholder="搜索这段视频的字幕…" aria-label="搜索字幕" disabled></div>
+        <div class="tools"><div class="toolbar"><select aria-label="字幕语言" disabled><option>等待加载字幕</option></select><button class="small font-toggle" aria-label="字体设置" aria-expanded="false" aria-controls="lyrics-font-settings" title="设置字幕字体和字号">Aa</button><button class="small reload" title="重新获取当前分 P 的字幕">重试</button></div><input class="search" type="search" placeholder="搜索这段视频的字幕…" aria-label="搜索字幕" disabled>
+          <div class="font-settings" id="lyrics-font-settings" hidden>
+            <label class="setting-label" for="lyrics-font-family">字幕字体</label>
+            <select id="lyrics-font-family" class="font-preset" aria-label="字幕字体">
+              <option value="system">系统默认</option><option value="yahei">微软雅黑</option><option value="simsun">宋体</option><option value="kaiti">楷体</option><option value="simhei">黑体</option><option value="pingfang">苹方</option><option value="sourcehan">思源黑体</option><option value="wenkai">霞鹜文楷</option><option value="custom">自定义字体…</option>
+            </select>
+            <label class="custom-font-field" hidden>本机字体名称<input class="font-name" type="text" aria-label="自定义字体名称" maxlength="120" placeholder="例如：LXGW WenKai / 霞鹜文楷" autocomplete="off" spellcheck="false"></label>
+            <div class="font-size-row"><label for="lyrics-font-size">字号</label><input id="lyrics-font-size" class="font-size" type="range" min="12" max="32" step="1" value="14" aria-label="字幕字号"><output class="font-size-value" for="lyrics-font-size">14px</output></div>
+            <div class="font-bottom"><span>需本机已安装；未安装时使用备用字体</span><button class="small font-reset">恢复默认</button></div>
+          </div>
+        </div>
         <div class="meta"><span class="count">点击字幕跳到对应时间</span><button class="follow" aria-pressed="true">跟随播放</button></div>
         <div class="status" role="status" aria-live="polite">展开后加载当前视频的字幕。</div>
         <div class="list" tabindex="0" role="region" aria-label="字幕列表，可上下滚动" hidden></div>
@@ -254,7 +275,7 @@
     <div class="resize-handles" hidden>${['n','s','w','e','nw','ne','sw','se'].map(edge => `<div class="resize-handle" data-edge="${edge}" title="拖动边缘调整面板大小"></div>`).join('')}</div>`;
 
   const $ = selector => shadow.querySelector(selector);
-  const ui = { head: $('.head'), body: $('.body'), select: $('select'), search: $('.search'),
+  const ui = { head: $('.head'), body: $('.body'), select: $('select[aria-label="字幕语言"]'), search: $('.search'),
     reload: $('.reload'), follow: $('.follow'), status: $('.status'), list: $('.list'),
     count: $('.count'), position: $('.position'), export: $('.export') };
   let expanded = false, loaded = false, following = true;
@@ -262,6 +283,19 @@
   let active = -1, video = null;
   const PREFS_KEY = 'bili-lyrics:panel:v1';
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const SYSTEM_FONT = '-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif';
+  const FONT_PRESETS = {
+    system: SYSTEM_FONT,
+    yahei: '"Microsoft YaHei","微软雅黑",sans-serif',
+    simsun: '"SimSun","宋体",serif',
+    kaiti: '"KaiTi","楷体",serif',
+    simhei: '"SimHei","黑体",sans-serif',
+    pingfang: '"PingFang SC","苹方-简",sans-serif',
+    sourcehan: '"Noto Sans CJK SC","Source Han Sans SC","思源黑体",sans-serif',
+    wenkai: '"LXGW WenKai","霞鹜文楷",serif',
+  };
+  const cleanFontName = value => typeof value === 'string'
+    ? value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 120) : '';
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch {}
   const layout = {
@@ -271,6 +305,9 @@
     height: Number.isFinite(saved.height) ? saved.height : 620,
     theme: ['dark','light'].includes(saved.theme) ? saved.theme
       : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+    fontPreset: Object.hasOwn(FONT_PRESETS, saved.fontPreset) || saved.fontPreset === 'custom' ? saved.fontPreset : 'system',
+    fontFamily: cleanFontName(saved.fontFamily),
+    fontSize: Number.isFinite(saved.fontSize) ? clamp(Math.round(saved.fontSize), 12, 32) : 14,
   };
   let suppressHeaderClickUntil = 0;
 
@@ -285,6 +322,46 @@
     $('.theme').title = dark ? '切换为浅色模式' : '切换为深色模式';
     $('.theme').textContent = dark ? '☀' : '☾';
   }
+
+  function applyFont() {
+    // A custom name is one quoted CSS family, not a CSS fragment or a URL.
+    const custom = cleanFontName(layout.fontFamily);
+    const family = layout.fontPreset === 'custom'
+      ? custom ? `${JSON.stringify(custom)},${SYSTEM_FONT}` : SYSTEM_FONT
+      : FONT_PRESETS[layout.fontPreset];
+    host.style.setProperty('--cue-font', family);
+    host.style.setProperty('--cue-size', `${layout.fontSize}px`);
+    $('.font-preset').value = layout.fontPreset;
+    $('.custom-font-field').hidden = layout.fontPreset !== 'custom';
+    if ($('.font-name').value !== layout.fontFamily) $('.font-name').value = layout.fontFamily;
+    $('.font-size').value = String(layout.fontSize);
+    $('.font-size-value').value = `${layout.fontSize}px`;
+    requestAnimationFrame(() => { if (following) centerActive(); });
+  }
+
+  $('.font-toggle').addEventListener('click', () => {
+    const open = $('.font-settings').hidden;
+    $('.font-settings').hidden = !open;
+    $('.font-toggle').setAttribute('aria-expanded', String(open));
+    requestAnimationFrame(() => { if (following) centerActive(); });
+  });
+  $('.font-preset').addEventListener('change', () => {
+    layout.fontPreset = $('.font-preset').value;
+    applyFont(); savePreferences();
+  });
+  $('.font-name').addEventListener('input', () => {
+    // Keep spaces while typing multi-word names; trim only the CSS family.
+    layout.fontFamily = $('.font-name').value.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 120);
+    applyFont(); savePreferences();
+  });
+  $('.font-size').addEventListener('input', () => {
+    layout.fontSize = clamp(Number($('.font-size').value), 12, 32);
+    applyFont(); savePreferences();
+  });
+  $('.font-reset').addEventListener('click', () => {
+    Object.assign(layout, { fontPreset: 'system', fontFamily: '', fontSize: 14 });
+    applyFont(); savePreferences();
+  });
 
   function applyLayout() {
     const width = clamp(layout.width, Math.min(280, innerWidth - 24), Math.max(1, innerWidth - 24));
@@ -355,7 +432,7 @@
     if (following) centerActive();
   });
   window.addEventListener('resize', applyLayout);
-  applyTheme(); applyLayout();
+  applyTheme(); applyLayout(); applyFont();
 
   function currentRoute() {
     const bvid = location.pathname.match(/\/video\/(BV[\w]+)\/?/i)?.[1];
